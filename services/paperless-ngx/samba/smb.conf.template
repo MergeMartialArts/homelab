@@ -1,0 +1,41 @@
+[global]
+
+server role = standalone server
+
+min protocol = SMB2
+max protocol = SMB3
+
+workgroup = WORKGROUP
+
+# Scanner compatibility
+oplocks = no
+level2 oplocks = no
+strict sync = yes
+
+
+[paperless-scanner]
+
+path = /srv/paperless/consume
+
+available = yes
+valid users = %USERNAME%
+
+read only = no
+writable = yes
+browsable = yes
+public = no
+
+create mask = 0664
+directory mask = 0775
+
+
+[paperless]
+
+path = /srv/paperless
+
+available = yes
+valid users = %USERNAME%
+
+read only = yes
+browsable = yes
+public = no

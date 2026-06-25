@@ -1,3 +1,26 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker
+*.log
+
+# Docker volumes / local data
+data/
+media/
+consume/
+export/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
