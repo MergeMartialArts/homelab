@@ -1,0 +1,15 @@
+services:
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - .watchtower.env
+    environment:
+      - DOCKER_API_VERSION=${DOCKER_API_VERSION}
+
+
+# start like so:
+# export DOCKER_API_VERSION=$(docker version --format '{{.Server.APIVersion}}') \
+#  && docker compose -f /home/tony/repos/homelab/services/watchtower/docker-compose.yml up -d
