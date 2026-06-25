@@ -8,15 +8,15 @@ Create environment file:
 
 ```bash
 cp .paperless.env.example .paperless.env
+cp .env.example .env
 ```
 
-Edit values before starting.
+Edit values (where change-me) before starting.
 
 Required values:
 
 ```env
 PAPERLESS_DIR=/srv/paperless
-POSTGRES_PASSWORD=change-me
 PAPERLESS_SECRET_KEY=change-me
 ```
 
