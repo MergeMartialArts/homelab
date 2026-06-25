@@ -46,7 +46,8 @@ apt update
 
 apt install -y \
     samba \
-    samba-common-bin
+    samba-common-bin \
+    smbclient
 
 
 
