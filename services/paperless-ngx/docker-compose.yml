@@ -45,6 +45,8 @@ services:
       POSTGRES_PASSWORD: paperless
   webserver:
     build: .
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
     user: "${USERMAP_UID}:${USERMAP_GID}"
     restart: unless-stopped
     depends_on:
@@ -80,6 +82,12 @@ services:
       - "--chromium-allow-list=file:///tmp/.*"
   tika:
     image: docker.io/apache/tika:latest
+    restart: unless-stopped
+  paperless-ngx-updater-for-watchtower-monitoring:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    entrypoint: ["tail", "-f", "/dev/null"]  # keeps it running, does nothing
+    labels:
+      - "com.centurylinklabs.watchtower.monitor-only=true"
     restart: unless-stopped
 volumes:
   pgdata:
