@@ -2,6 +2,9 @@ services:
   watchtower:
     image: containrrr/watchtower
     restart: unless-stopped
+    labels:
+      - "homelab.monitor=true"
+      - "homelab.service=watchtower"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     env_file:
