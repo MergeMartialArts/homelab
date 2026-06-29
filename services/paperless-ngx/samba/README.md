@@ -1,261 +1,105 @@
-# Samba Scanner Integration
+# Samba — Scanner Integration
 
-Samba provides a network share for scanners to upload documents into Paperless-ngx.
+Exposes the Paperless consume directory as a network share so scanners can drop documents directly into Paperless.
 
-The Samba service runs on the Linux host and exposes only the Paperless consume directory.
-
----
-
-## Purpose
-
-The document flow is:
-
-```text
-Scanner
-   |
-   v
-Samba share
-   |
-   v
-Paperless consume folder
-   |
-   v
-Paperless-ngx consumer
-   |
-   +--> OCR
-   +--> indexing
-   +--> storage
-```
-
-The scanner never writes directly into Paperless storage.
-
----
-
-## Why only expose consume?
-
-Paperless manages its internal storage:
+## Document Flow
 
 ```
-/srv/paperless/
-
-├── consume/
-│   └── incoming scanner files
-│
-├── media/
-│   └── processed documents
-│
-├── data/
-│   └── database and application data
-│
-└── export/
-    └── exported documents
+Scanner → \\SERVER\paperless-scanner → PAPERLESS_DIR/consume → Paperless consumer → OCR → storage
 ```
 
-Only:
+## Shares
 
+| Variable | Default | Path | Access |
+|---|---|---|---|
+| `SCANNER_SHARE_NAME` | `paperless-scanner` | `PAPERLESS_DIR/consume` | read/write |
+| `PAPERLESS_SHARE_NAME` | `paperless` | `PAPERLESS_DIR` | read-only |
+
+Share names are configurable in `.env`. Only `consume` is writable. Paperless manages everything else internally — modifying `media/` or `data/` directly can break document references and metadata.
+
+## Setup
+
+### Via Paperless setup (recommended)
+
+Samba setup is offered as an optional step at the end of Paperless setup:
+
+```bash
+bash ../setup.sh
 ```
-consume/
+
+### Standalone
+
+```bash
+sudo bash setup.sh
 ```
 
-is shared through Samba.
+Requirements:
+- Debian / Ubuntu host
+- `sudo` access
+- `paperless-ngx/.env` present and configured (for `USERMAP_UID` / `PAPERLESS_DIR`)
 
-The following directories must not be modified manually:
+What setup does:
 
-```
-media/
-data/
-```
-
-Changing them can break document references and metadata.
-
----
+1. Creates `.env` from `.env.example` if missing
+2. Installs Samba packages
+3. Creates Paperless data directories (`consume`, `media`, `data`, `export`) — safe to run even if `paperless-ngx/setup.sh` already created them
+4. Sets ownership and permissions aligned with `USERMAP_UID` / `USERMAP_GID`
+5. Creates a Samba user account
+6. Installs Samba configuration
+7. Enables and starts `smbd`
 
 ## Configuration
 
-The Paperless storage location is defined in:
+`.env` is created automatically from `.env.example` on first run.
+
+| Variable | Default | Description |
+|---|---|---|
+| `WORKGROUP` | `WORKGROUP` | Samba workgroup name |
+| `SHARE_USER` | derived from `USERMAP_UID` | Linux user for the share (override only if needed) |
+| `PAPERLESS_DIR` | from `paperless-ngx/.env` | Paperless data directory (override only when running standalone) |
+
+## User and Permission Alignment
+
+`USERMAP_UID` and `USERMAP_GID` from `paperless-ngx/.env` are the single source of truth. They control:
+
+- Which user Docker runs the Paperless container as
+- Who owns the data directories on the host
+- Which Linux user owns the Samba share
+
+`SHARE_USER` is resolved automatically via `getent passwd $USERMAP_UID`. If the resolved user's UID/GID does not match `USERMAP_UID`/`USERMAP_GID`, setup exits with an error.
+
+When running standalone without `paperless-ngx/.env`, UID/GID are derived from `$SUDO_USER`.
+
+## Connecting
+
+After setup the scanner share is available at:
 
 ```
-.env
+\\SERVER_IP\SCANNER_SHARE_NAME
 ```
 
-Example:
+The actual share name and server IP are printed at the end of setup. Login with the Linux username and the Samba password set during setup.
 
-```env
-PAPERLESS_DIR=/srv/paperless
-```
+### Recommended Scanner Settings
 
-This value is used by:
-
-- Docker Compose
-- Samba installation
-
-Both services point to the same storage location.
-
----
-
-## Installation
-
-Requirements:
-
-- Debian / Ubuntu host
-- sudo access
-- network access from scanner
-- Paperless storage directory configured
-
-
-From this directory:
-
-```bash
-cd services/paperless-ngx/samba
-```
-
-Run:
-
-```bash
-sudo bash install.sh
-```
-
-The installer:
-
-1. Installs Samba
-2. Creates Paperless directories
-3. Sets permissions
-4. Creates Samba credentials
-5. Installs Samba configuration
-6. Starts the Samba service
-
----
-
-## Scanner Configuration
-
-After installation the share is available:
-
-```
-\\SERVER_IP\paperless-scanner
-```
-
-Example:
-
-```
-\\192.168.1.50\paperless-scanner
-```
-
-Login:
-
-```
-Username:
-your Linux username
-
-Password:
-your Samba password
-```
-
-Set scanner destination:
-
-```
-paperless-scanner
-```
-
-Files will appear in:
-
-```
-PAPERLESS_DIR/consume
-```
-
----
-
-## Recommended Scanner Settings
-
-Recommended:
-
-- File format: PDF
-- Quality: normal
-- Duplex: enabled if needed
-- OCR: disabled
-
-Paperless performs OCR after import.
-
----
-
-## Samba Compatibility Settings
-
-The Samba configuration disables:
-
-```ini
-oplocks = no
-level2 oplocks = no
-strict sync = yes
-```
-
-Some scanners upload files slowly.
-
-Without these settings Paperless may detect:
-
-```
-document.pdf
-```
-
-before the scanner has finished writing it.
-
-Possible symptoms:
-
-- invalid PDF
-- corrupted document
-- MIME detection errors
-
----
+| Setting | Value |
+|---|---|
+| Format | PDF |
+| OCR | Disabled — Paperless handles OCR |
+| Duplex | As needed |
 
 ## Troubleshooting
 
-Check Samba:
-
 ```bash
+# Service status
 systemctl status smbd
-```
 
----
-
-List shares:
-
-```bash
+# List shares
 smbclient -L localhost -U USERNAME
-```
 
----
-
-Check permissions:
-
-```bash
+# Check permissions on consume directory
 ls -la /srv/paperless/consume
-```
 
----
-
-View logs:
-
-```bash
-journalctl -u smbd
-```
-
----
-
-## Removing Samba
-
-Stop Samba:
-
-```bash
-sudo systemctl disable smbd
-sudo systemctl stop smbd
-```
-
-Remove package:
-
-```bash
-sudo apt remove samba
-```
-
-Paperless data remains:
-
-```
-PAPERLESS_DIR
+# Live logs
+journalctl -u smbd -f
 ```

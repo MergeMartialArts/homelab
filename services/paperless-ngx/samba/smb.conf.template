@@ -5,7 +5,7 @@ server role = standalone server
 min protocol = SMB2
 max protocol = SMB3
 
-workgroup = WORKGROUP
+workgroup = %WORKGROUP%
 
 # Scanner compatibility
 oplocks = no
@@ -13,9 +13,9 @@ level2 oplocks = no
 strict sync = yes
 
 
-[paperless-scanner]
+[%SCANNER_SHARE_NAME%]
 
-path = /srv/paperless/consume
+path = %PAPERLESS_DIR%/consume
 
 available = yes
 valid users = %USERNAME%
@@ -29,9 +29,9 @@ create mask = 0664
 directory mask = 0775
 
 
-[paperless]
+[%PAPERLESS_SHARE_NAME%]
 
-path = /srv/paperless
+path = %PAPERLESS_DIR%
 
 available = yes
 valid users = %USERNAME%

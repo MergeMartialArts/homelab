@@ -156,7 +156,10 @@ services:
     entrypoint: ["tail", "-f", "/dev/null"]  # keeps it running, does nothing
     labels:
       - "com.centurylinklabs.watchtower.monitor-only=true"
+      - "homelab.monitor-only-for-possible-updates=true"
     restart: unless-stopped
+    healthcheck:
+      disable: true
 volumes:
   pgdata:
   redisdata:
