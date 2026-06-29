@@ -1,0 +1,33 @@
+services:
+  frontend:
+    build: .
+    restart: unless-stopped
+    labels:
+      - "homelab.monitor=true"
+      - "homelab.service=homelab-frontend"
+      - "com.centurylinklabs.watchtower.enable=false"
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    volumes:
+      - ./index.html:/app/index.html:ro
+    environment:
+      - API_URL=${API_URL:-http://host.docker.internal:8080}
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+  python-base-updater-for-watchtower-monitoring:
+    image: python:3.14-slim
+    entrypoint: ["tail", "-f", "/dev/null"]
+    labels:
+      - "com.centurylinklabs.watchtower.monitor-only=true"
+      - "homelab.monitor-only-for-possible-updates=true"
+    restart: unless-stopped
+    healthcheck:
+      disable: true
